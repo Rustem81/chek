@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 # log_format ui_short '$remote_addr  $remote_user $http_x_real_ip [$time_local] "$request" '
 #                     '$status $body_bytes_sent "$http_referer" '
 #                     '"$http_user_agent" "$http_x_forwarded_for" "$http_X_REQUEST_ID" "$http_X_RB_USER" '
@@ -14,8 +13,6 @@ import json
 from string import Template
 import itertools
 import gzip
-import sys
-import traceback
 import logging
 import configparser
 import argparse
@@ -30,38 +27,36 @@ config = {
     "LOG_DIR": "./reports/",
     "LOG_FILE": None,
     "LOG_LEVEL": "ERROR",
-    "ERROR_LIMIT": 1
+    "ERROR_LIMIT": 1,
 }
 
 DEFAULT_CFG_PATH = "./analyzer.cfg"
 
-LogFile = namedtuple('LogFile', 'name date')
-ReportStat = namedtuple('ReportStat', 'urls times errors report')
-UrlRawStat = namedtuple('UrlRawStat', 'url time error')
+LogFile = namedtuple("LogFile", "name date")
+ReportStat = namedtuple("ReportStat", "urls times errors report")
+UrlRawStat = namedtuple("UrlRawStat", "url time error")
 
 log_name_pattern = re.compile(r"nginx-access-ui\.log-(\d{8})\.(log|gz)$")
-log_rec_pattern = re.compile(r"\S+\s+"        # $remote_addr
-                             r"\S+\s+"        # $remote_user
-                             r"\S+\s+"        # $http_x_real_ip
-                             r"\[.*\]\s+"     # [$time_local]
-                             r"(\".*?\")\s+"  # "$request"
-                             r"\S+\s+"        # $status
-                             r"\S+\s+"        # $body_bytes_sent
-                             r"\".*?\"\s+"    # "$http_referer"
-                             r"\".*?\"\s+"    # "$http_user_agent"
-                             r"\".*?\"\s+"    # "$http_x_forwarded_for"
-                             r"\".*?\"\s+"    # "$http_X_REQUEST_ID"
-                             r"\".*?\"\s+"    # "$http_X_RB_USER"
-                             r"([\d\.]+)$")   # $request_time)
+log_rec_pattern = re.compile(
+    r"\S+\s+"  # $remote_addr
+    r"\S+\s+"  # $remote_user
+    r"\S+\s+"  # $http_x_real_ip
+    r"\[.*\]\s+"  # [$time_local]
+    r"(\".*?\")\s+"  # "$request"
+    r"\S+\s+"  # $status
+    r"\S+\s+"  # $body_bytes_sent
+    r"\".*?\"\s+"  # "$http_referer"
+    r"\".*?\"\s+"  # "$http_user_agent"
+    r"\".*?\"\s+"  # "$http_x_forwarded_for"
+    r"\".*?\"\s+"  # "$http_X_REQUEST_ID"
+    r"\".*?\"\s+"  # "$http_X_RB_USER"
+    r"([\d\.]+)$"
+)  # $request_time)
+
+OptDes = namedtuple("OptDes", "flags default nargs help")
+options = {"config_path": OptDes("--config", DEFAULT_CFG_PATH, "?", "Path to configuration file")}
 
 
-OptDes = namedtuple('OptDes', 'flags default nargs help')
-options = {"config_path": OptDes('--config',
-                                 DEFAULT_CFG_PATH,
-                                 '?',
-                                 "Path to configuration file")}
-
-print(options)
 def get_last_log(log_dir):
     """
     Returns the last file name compared by date
@@ -92,9 +87,9 @@ def gen_record(path):
     Generates valid URL and request_time from 'path'
     if 'error'== True
     """
-    log_open = gzip.open if path.endswith('.gz') else open
+    log_open = gzip.open if path.endswith(".gz") else open
 
-    with log_open(path, 'rt', encoding='utf-8') as log:
+    with log_open(path, "rt", encoding="utf-8") as log:
         for line in log:
             yield process_record(line.strip())
 
@@ -131,51 +126,48 @@ def calculate_stat(report_stat, report_size):
     time_max
     time_med for each url in 'raw_report'
     """
-    UrlStat = namedtuple('UrlStat', 'time_sum time_med time_max count url')
+    UrlStat = namedtuple("UrlStat", "time_sum time_med time_max count url")
 
     logging.info("Calculating statistics ...")
 
     precision = 3
     full_report = []
     for url, times in report_stat.report.items():
-        full_report.append(UrlStat(sum(times),
-                           statistics.median(times),
-                           max(times),
-                           len(times),
-                           url
-                           ))
+        full_report.append(UrlStat(sum(times), statistics.median(times), max(times), len(times), url))
 
     full_report = sorted(full_report, key=lambda kv: kv[0], reverse=True)
 
     report_for_save = []
     for line in itertools.islice(full_report, 0, report_size):
-        time_avg = line.time_sum/line.count
-        time_perc = line.time_sum/report_stat.times * 100.0
-        count_perc = line.count/report_stat.urls * 100.0
+        time_avg = line.time_sum / line.count
+        time_perc = line.time_sum / report_stat.times * 100.0
+        count_perc = line.count / report_stat.urls * 100.0
 
-        report_for_save.append({"url": line.url,
-                                "count": round(line.count, precision),
-                                "time_sum": round(line.time_sum, precision),
-                                "time_avg": round(time_avg,  precision),
-                                "time_med": round(line.time_med, precision),
-                                "time_max": round(line.time_max, precision),
-                                "time_perc": round(time_perc, precision),
-                                "count_perc": round(count_perc, precision)
-                                })
+        report_for_save.append(
+            {
+                "url": line.url,
+                "count": round(line.count, precision),
+                "time_sum": round(line.time_sum, precision),
+                "time_avg": round(time_avg, precision),
+                "time_med": round(line.time_med, precision),
+                "time_max": round(line.time_max, precision),
+                "time_perc": round(time_perc, precision),
+                "count_perc": round(count_perc, precision),
+            }
+        )
     return report_for_save
 
 
-def save_as_json(file_path, report, sample_report='report.html'):
+def save_as_json(file_path, report, sample_report="report.html"):
     """
     Saves report as json file
     """
     logging.info("Saving report ...")
 
-    with open(sample_report, 'rt') as html_report:
+    with open(sample_report, "rt") as html_report:
         s = Template(html_report.read())
-        with open(file_path, 'wt', encoding='utf-8') as f_report:
-            f_report.write(s.safe_substitute(table_json=json.dumps(report,
-                           sort_keys=True)))
+        with open(file_path, "wt", encoding="utf-8") as f_report:
+            f_report.write(s.safe_substitute(table_json=json.dumps(report, sort_keys=True)))
 
     logging.info("Report {} saved.".format(file_path))
 
@@ -206,9 +198,7 @@ def parse_opt(opt_des):
     opt = {}
     parser = argparse.ArgumentParser()
     for key, des in opt_des.items():
-        parser.add_argument(des.flags, default=des.default,
-                            nargs=des.nargs, dest=key,
-                            help=des.help)
+        parser.add_argument(des.flags, default=des.default, nargs=des.nargs, dest=key, help=des.help)
     args = parser.parse_args()
 
     for key in opt_des:
@@ -225,27 +215,17 @@ def get_cfg(file_path):
     cfg = config.copy()
 
     if not os.path.isfile(file_path):
-        logging.error('Wrong file or file path: {}'.format(file_path))
+        logging.error("Wrong file or file path: {}".format(file_path))
         raise FileNotFoundError("Config file not found")
 
     file_cfg = configparser.ConfigParser()
-    file_cfg.read(file_path, encoding='utf-8')
-    cfg["LOG_DIR"] = file_cfg.get("Common",
-                                  "LOG_DIR",
-                                  fallback=cfg["LOG_DIR"])
-    cfg["REPORT_DIR"] = file_cfg.get("Common",
-                                     "REPORT_DIR",
-                                     fallback=cfg["REPORT_DIR"])
-    cfg["REPORT_SIZE"] = int(file_cfg.get("Common",
-                                          "REPORT_SIZE",
-                                          fallback=cfg["REPORT_SIZE"]))
-    cfg["LOG_FILE"] = file_cfg.get("Log", "LOG_FILE",
-                                   fallback=cfg["LOG_FILE"])
-    cfg["LOG_LEVEL"] = file_cfg.get("Log", "LOG_LEVEL",
-                                    fallback=cfg["LOG_LEVEL"])
-    cfg["ERROR_LIMIT"] = float(file_cfg.get("Common",
-                                            "ERROR_LIMIT",
-                                            fallback=cfg["ERROR_LIMIT"]))
+    file_cfg.read(file_path, encoding="utf-8")
+    cfg["LOG_DIR"] = file_cfg.get("Common", "LOG_DIR", fallback=cfg["LOG_DIR"])
+    cfg["REPORT_DIR"] = file_cfg.get("Common", "REPORT_DIR", fallback=cfg["REPORT_DIR"])
+    cfg["REPORT_SIZE"] = int(file_cfg.get("Common", "REPORT_SIZE", fallback=cfg["REPORT_SIZE"]))
+    cfg["LOG_FILE"] = file_cfg.get("Log", "LOG_FILE", fallback=cfg["LOG_FILE"])
+    cfg["LOG_LEVEL"] = file_cfg.get("Log", "LOG_LEVEL", fallback=cfg["LOG_LEVEL"])
+    cfg["ERROR_LIMIT"] = float(file_cfg.get("Common", "ERROR_LIMIT", fallback=cfg["ERROR_LIMIT"]))
 
     return cfg
 
@@ -254,26 +234,24 @@ def is_valid_cfg_options(cfg):
     """
     Validates config options
     """
-    return (os.path.isdir(cfg["LOG_DIR"]) and
-            os.path.isdir(cfg["REPORT_DIR"]) and
-            cfg["REPORT_SIZE"] > 0)
+    return os.path.isdir(cfg["LOG_DIR"]) and os.path.isdir(cfg["REPORT_DIR"]) and cfg["REPORT_SIZE"] > 0
 
 
 def setup_logging(file_path, log_level):
     """
     Logging configuration setup
     """
-    level = {'INFO': logging.INFO,
-             'ERROR': logging.ERROR,
-             'DEBUG': logging.DEBUG}
+    level = {"INFO": logging.INFO, "ERROR": logging.ERROR, "DEBUG": logging.DEBUG}
     if log_level not in level:
-        raise ValueError('Wrong LOG_LEVEL')
+        raise ValueError("Wrong LOG_LEVEL")
 
-    logging.basicConfig(level=level[log_level],
-                        format='[%(asctime)s] %(levelname).1s %(message)s',
-                        datefmt='%Y.%m.%d %H:%M:%S',
-                        filename=file_path,
-                        filemode='w')
+    logging.basicConfig(
+        level=level[log_level],
+        format="[%(asctime)s] %(levelname).1s %(message)s",
+        datefmt="%Y.%m.%d %H:%M:%S",
+        filename=file_path,
+        filemode="w",
+    )
 
 
 def log_process(log_path, report_size):
@@ -283,19 +261,17 @@ def log_process(log_path, report_size):
     logging.info("Process: {}".format(log_path))
     report_stat = get_raw_stat(log_path)
 
-    logging.info("urls = {} errors = {}".format(report_stat.urls,
-                                                report_stat.errors))
+    logging.info("urls = {} errors = {}".format(report_stat.urls, report_stat.errors))
 
     error_limit = 0
     if report_stat.urls:
-        error_limit = report_stat.errors/report_stat.urls
+        error_limit = report_stat.errors / report_stat.urls
     else:
         error_limit = report_stat.errors
 
     report = []
     if report_stat.report:
-        report = calculate_stat(report_stat,
-                                report_size)
+        report = calculate_stat(report_stat, report_size)
 
     return report, error_limit
 
@@ -303,7 +279,7 @@ def log_process(log_path, report_size):
 def main():
     opt = parse_opt(options)
     cfg = get_cfg(opt["config_path"])
-    
+
     setup_logging(cfg["LOG_FILE"], cfg["LOG_LEVEL"])
     if not is_valid_cfg_options(cfg):
         logging.error("Invalid config: {}".format(cfg))
@@ -311,12 +287,12 @@ def main():
     log_des = get_last_log(cfg["LOG_DIR"])
     report_path = os.path.join(cfg["REPORT_DIR"], "report-{}.html".format(log_des.date))
     log_path = os.path.join(cfg["LOG_DIR"], log_des.name)
-    is_need_process = (os.path.isfile(log_path) and not os.path.isfile(report_path))
+    is_need_process = os.path.isfile(log_path) and not os.path.isfile(report_path)
     if not is_need_process:
         logging.info("No log-files to process")
         return
-    
-    report, error_limit = log_process(log_path, cfg["REPORT_SIZE"])    
+
+    report, error_limit = log_process(log_path, cfg["REPORT_SIZE"])
     if error_limit > cfg["ERROR_LIMIT"]:
         logging.error("Errors: {}%".format(error_limit))
         return

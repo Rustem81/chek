@@ -6,41 +6,45 @@ from functools import wraps
 
 
 def disable(f):
-    '''
+    """
     Disable a decorator by re-assigning the decorator's name
     to this function. For example, to turn off memoization:
 
     >>> memo = disable
 
-    '''
+    """
     return f if callable(f) else lambda f: f
 
 
 def decorator(deco):
-    '''
+    """
     Decorate a decorator so that it inherits the docstrings
     and stuff from the function it's decorating.
-    '''
+    """
+
     def wrapper(f):
         return update_wrapper(deco(f), f)
+
     return update_wrapper(wrapper, deco)
 
 
 def countcalls(f):
-    '''Decorator that counts calls made to the function decorated.'''
+    """Decorator that counts calls made to the function decorated."""
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         wrapper.calls += 1
         return f(*args, **kwargs)
+
     wrapper.calls = 0
     return wrapper
 
 
 def memo(f):
-    '''
+    """
     Memoize a function so that it caches all return values for
     faster future lookups.
-    '''
+    """
     cache = {}
 
     @wraps(f)
@@ -49,25 +53,27 @@ def memo(f):
             cache[args] = f(*args)
         update_wrapper(wrapper, f)
         return cache[args]
+
     return wrapper
 
 
 def n_ary(f):
-    '''
+    """
     Given binary function f(x, y), return an n_ary function such
     that f(x, y, z) = f(x, f(y,z)), etc. Also allow f(x) = x.
-    '''
+    """
     print(f)
 
     @wraps(f)
     def wrapper(x, *args):
         # print("-->",x, *args)
         return x if not args else f(x, wrapper(*args))
+
     return wrapper
 
 
 def trace(fill_value):
-    '''Trace calls made to function decorated.
+    """Trace calls made to function decorated.
 
     @trace("____")
     def fib(n):
@@ -85,7 +91,8 @@ def trace(fill_value):
     ____ <-- fib(1) == 1
      <-- fib(3) == 3
 
-    '''
+    """
+
     def trace_decorator(f):
         @wraps(f)
         def wrapper(*args):
@@ -97,8 +104,10 @@ def trace(fill_value):
             print("{} <-- {}({}) == {}".format(prefix, f.__name__, fargs, result))
             wrapper.level -= 1
             return result
+
         wrapper.level = 0
         return wrapper
+
     return trace_decorator
 
 
@@ -120,7 +129,7 @@ def bar(a, b):
 @trace("####")
 @memo
 def fib(n):
-    return 1 if n <= 1 else fib(n-1) + fib(n-2)
+    return 1 if n <= 1 else fib(n - 1) + fib(n - 2)
 
 
 def main():
@@ -134,8 +143,8 @@ def main():
     print("bar was called", bar.calls, "times")
     print(fib.__doc__)
     fib(3)
-    print(fib.calls, 'calls made')
+    print(fib.calls, "calls made")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
