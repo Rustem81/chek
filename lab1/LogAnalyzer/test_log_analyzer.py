@@ -59,29 +59,29 @@ class ConfigFileTest(unittest.TestCase):
         os.remove("bad_config_file.cfg")
 
 
-# class GetLastFileTest(unittest.TestCase):
-#    def test_log_files(self):
-#        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
-#        os.mkdir("test_log")
-#        os.mknod("test_log/nginx-access-ui.log-20281201.log")
-#        os.mknod("test_log/nginx-access-ui.log-20291212.gzip")
-#        os.mknod("test_log/nginx-access-ui.log-20281001.log")
-#        log_file, date = log_analyzer.get_last_log("test_log")
-#        self.assertEqual(log_file, "nginx-access-ui.log-20281201.log")
-#        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
-#
-#    def test_gz_files(self):
-#        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
-#        os.mkdir("test_log")
-#        os.mknod("test_log/nginx-access-ui.log-20181201.log")
-#        os.mknod("test_log/nginx-access-ui.log-20191201.gz")
-#        os.mknod("test_log/nginx-access-ui.log-20161224.gz")
-#        os.mknod("test_log/nginx-access-ui.log-20191212.gzip")
-#        log_file, date = log_analyzer.get_last_log("test_log")
-#        self.assertEqual(log_file, "nginx-access-ui.log-20191201.gz")
-#        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
-#
-#
+class GetLastFileTest(unittest.TestCase):
+    def test_log_files(self):
+        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
+        os.mkdir("test_log")
+        os.mknod("test_log/nginx-access-ui.log-20281201.log")
+        os.mknod("test_log/nginx-access-ui.log-20291212.gzip")
+        os.mknod("test_log/nginx-access-ui.log-20281001.log")
+        log_file, date = log_analyzer.get_last_log("test_log")
+        self.assertEqual(log_file, "nginx-access-ui.log-20281201.log")
+        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
+
+    def test_gz_files(self):
+        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
+        os.mkdir("test_log")
+        os.mknod("test_log/nginx-access-ui.log-20181201.log")
+        os.mknod("test_log/nginx-access-ui.log-20191201.gz")
+        os.mknod("test_log/nginx-access-ui.log-20161224.gz")
+        os.mknod("test_log/nginx-access-ui.log-20191212.gzip")
+        log_file, date = log_analyzer.get_last_log("test_log")
+        self.assertEqual(log_file, "nginx-access-ui.log-20191201.gz")
+        shutil.rmtree("test_log", ignore_errors=True, onerror=None)
+
+
 class ReportGenerationTest(unittest.TestCase):
     result_report = [
         {"url": "/api/v2/banner/3", "count": 3, "time_perc": 53.333, "time_sum": 0.8, "time_max": 0.4, "count_perc": 50.0, "time_med": 0.3, "time_avg": 0.267},
