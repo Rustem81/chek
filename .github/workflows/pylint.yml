@@ -26,5 +26,9 @@ jobs:
     - name: Format format_loganalyzer
       run: |
         make format_loganalyzer
+
+    - name: Test test_loganalyzer
+      run: |
+        make test_loganalyzer
     
 
