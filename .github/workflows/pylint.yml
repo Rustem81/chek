@@ -23,5 +23,8 @@ jobs:
     - name: Format format_deco
       run: |
         make format_deco
+    - name: Format format_loganalyzer
+      run: |
+        make format_loganalyzer
     
 
