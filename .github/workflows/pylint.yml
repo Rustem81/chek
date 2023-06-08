@@ -16,8 +16,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-    - name: Analysing the code with pylint
+        make install    
+    - name: Format format_poker
       run: |
-        pylint $(git ls-files '*.py')
+        make format_poker
+    - name: Format format_deco
+      run: |
+        make format_deco
+    
+
