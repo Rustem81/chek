@@ -11,8 +11,10 @@ format_poker:
 format_deco:
 	black ./lab1/Deco/
 
+format_loganalyzer:
+	black ./lab1/LogAnalyzer/
 
-#lint_poker:
-#	pylint --disable=R,C ./lab1/Poker/
 
-all: install format_poker format_deco
+
+
+all: install format_poker format_deco format_loganalyzer
