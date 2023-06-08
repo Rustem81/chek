@@ -1,5 +1,5 @@
 import unittest
-import log_analyzer
+import LogAnalyzer.log_analyzer as log_analyzer
 import os
 import configparser
 import shutil
