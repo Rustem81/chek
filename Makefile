@@ -6,10 +6,10 @@ install:
 #	python -m pytest -vv ./temp/test_hello.py
 
 format_poker:
-	black ./temp/Poker/
+	black ./lab1/Poker/
 
 format_deco:
-	black ./temp/Deco/
+	black ./lab1/Deco/
 
 
 #lint_poker:
