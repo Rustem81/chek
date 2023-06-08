@@ -109,18 +109,18 @@ class ReportGenerationTest(unittest.TestCase):
 
 class LogAnalizerMainTest(unittest.TestCase):
     def test_plain_log(self):
-        shutil.rmtree("./lab1/LogAnalyzer/test_data/test_reports", ignore_errors=True, onerror=None)
-        os.mkdir("./lab1/LogAnalyzer/test_data/test_reports")
+        shutil.rmtree("./test_data/test_reports", ignore_errors=True, onerror=None)
+        os.mkdir("./test_data/test_reports")
         os.system("python3 ./lab1/LogAnalyzer/log_analyzer.py --config ./lab1/LogAnalyzer/test_data/test.cfg")
-        self.assertTrue(filecmp.cmp("./lab1/LogAnalyzer/test_data/test_reports/report-20230607.html", "./lab1/LogAnalyzer/test_data/report-20230607.html"))
+        self.assertTrue(filecmp.cmp("./test_data/test_reports/report-20230607.html", "./test_data/report-20230607.html"))
         shutil.rmtree("./lab1/LogAnalyzer/test_data/test_reports", ignore_errors=True, onerror=None)
 
     def test_gz_log(self):
-        shutil.rmtree("./lab1/LogAnalyzer/test_data/test_reports", ignore_errors=True, onerror=None)
-        os.mkdir("./lab1/LogAnalyzer/test_data/test_reports")
-        os.system("python3 ./lab1/LogAnalyzer/log_analyzer.py --config ./lab1/LogAnalyzer/test_data/test_gz.cfg")
-        self.assertTrue(filecmp.cmp("./lab1/LogAnalyzer/test_data/test_reports/report-20230607.html", "./lab1/LogAnalyzer/test_data/report-20230607.html"))
-        shutil.rmtree("./lab1/LogAnalyzer/test_data/test_reports", ignore_errors=True, onerror=None)
+        shutil.rmtree("./test_data/test_reports", ignore_errors=True, onerror=None)
+        os.mkdir("./test_data/test_reports")
+        os.system("python3 ./log_analyzer.py --config ./test_data/test_gz.cfg")
+        self.assertTrue(filecmp.cmp("./test_data/test_reports/report-20230607.html", "./test_data/report-20230607.html"))
+        shutil.rmtree("./test_data/test_reports", ignore_errors=True, onerror=None)
 
 
 if __name__ == "__main__":
