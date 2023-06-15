@@ -1,0 +1,22 @@
+version: "3.5"
+
+networks:
+  internal: {}  
+  
+services:
+  2lab:
+    container_name: 2lab
+    build:
+      context: ./Server/
+      dockerfile: ./Dockerfile
+    tty: true
+    volumes:
+      - ./Test/test.py:/test/test.py
+    networks:
+      - internal
+
+   
+  
+
+
+
