@@ -12,6 +12,7 @@ services:
     tty: true
     volumes:
       - ./Test/test.py:/test/test.py
+      - ./Test/:/test/
     networks:
       - internal
 

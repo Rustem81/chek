@@ -1,10 +1,13 @@
 FROM centos:7
-ENV INSTALL_PYTHON=true \
-    INSTALL_NANO=true \
-    INSTALL_GIT=true \
-    TIME_ZONE=UTC
-ADD scripts /scripts/
-RUN sed -i -e 's/\r$//' /scripts/nano.sh
-RUN sed -i -e 's/\r$//' /scripts/python.sh
-RUN sed -i -e 's/\r$//' /scripts/git.sh
-RUN /scripts/install_main.sh
+
+WORKDIR /app
+
+
+RUN yum clean all 
+RUN yum install -y git make gcc-c++ vim ssh
+RUN git clone https://github.com/python/cpython.git . \
+    && git checkout 2.7 \
+    && ./configure --with-pydebug --prefix=/app
+
+
+
