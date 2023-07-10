@@ -8,14 +8,14 @@ import socket
 from urllib.parse import unquote, urlparse
 
 
-DOCUMENT_ROOT = 'www'
+DOCUMENT_ROOT = "www"
 """Default files root directory"""
 
 CHUNK_SIZE = 1024
 """Request chunk size"""
 MAX_REQUEST_SIZE = 8192
 """Maximum request size"""
-HEAD_TERMINATOR = '\r\n\r\n'
+HEAD_TERMINATOR = "\r\n\r\n"
 """Head section termination sequence"""
 
 HTTP_200_OK = 200
@@ -24,17 +24,17 @@ HTTP_403_FORBIDDEN = 403
 HTTP_404_NOT_FOUND = 404
 HTTP_405_METHOD_NOT_ALLOWED = 405
 RESPONSE_CODES = {
-    HTTP_200_OK: 'OK',
-    HTTP_400_BAD_REQUEST: 'Bad Request',
-    HTTP_403_FORBIDDEN: 'Forbidden',
-    HTTP_404_NOT_FOUND: 'Not Found',
-    HTTP_405_METHOD_NOT_ALLOWED: 'Method Not Allowed',
+    HTTP_200_OK: "OK",
+    HTTP_400_BAD_REQUEST: "Bad Request",
+    HTTP_403_FORBIDDEN: "Forbidden",
+    HTTP_404_NOT_FOUND: "Not Found",
+    HTTP_405_METHOD_NOT_ALLOWED: "Method Not Allowed",
 }
 """Response codes"""
 
-SERVER_NAME = 'OTUServer'
+SERVER_NAME = "OTUServer"
 """Server name"""
-PROTOCOL = 'HTTP/1.1'
+PROTOCOL = "HTTP/1.1"
 """Protocol version"""
 
 
@@ -42,14 +42,16 @@ class HTTPRequest(object):
     """
     HTTP request handler
     """
-    methods = ('GET', 'HEAD')
 
-    def __init__(self, document_root):
+    def __init__(self, document_root, methods):
         """
         Args:
             document_root (str): Files root directory
+            methods (tuple): Methods HTTP request
         """
-        self.document_root = document_root
+
+        self.document_root = (document_root,)
+        self.methods = methods
 
     def parse(self, request_data):
         """
@@ -61,18 +63,18 @@ class HTTPRequest(object):
         Returns:
             (int, str, str, dict): (Response code, Request method, Request document path)
         """
-        lines = request_data.split('\r\n')
+        lines = request_data.split("\r\n")
         try:
             method, url, version = lines[0].split()
             method = method.upper()
         except ValueError:
-            return HTTP_400_BAD_REQUEST, '?', '?', {}
+            return HTTP_400_BAD_REQUEST, "?", "?", {}
 
         headers = {}
         for line in lines[1:]:
             if not line.split():
                 break
-            k, v = line.split(':', 1)
+            k, v = line.split(":", 1)
             headers[k.lower()] = v.strip()
 
         if method not in self.methods:
@@ -97,13 +99,13 @@ class HTTPRequest(object):
 
         is_directory = os.path.isdir(path)
         if is_directory:
-            if not path.endswith('/'):
-                path += '/'
-            path = os.path.join(path, 'index.html')
+            if not path.endswith("/"):
+                path += "/"
+            path = os.path.join(path, "index.html")
 
-        if not is_directory and parsed_path.endswith('/'):
+        if not is_directory and parsed_path.endswith("/"):
             return HTTP_404_NOT_FOUND, path
-        if path.endswith('/') or not os.path.isfile(path):
+        if path.endswith("/") or not os.path.isfile(path):
             return HTTP_404_NOT_FOUND, path
 
         return HTTP_200_OK, path
@@ -129,84 +131,34 @@ class HTTPResponse(object):
         """
         # Prepare meta info
         file_size = 0
-        content_type = 'text/plain'
-        body = b''
+        content_type = "text/plain"
+        body = b""
         if self.code == HTTP_200_OK:
-            file_size = self.request_headers.get('content-length', os.path.getsize(self.path))
-            if self.method == 'GET':
+            file_size = self.request_headers.get("content-length", os.path.getsize(self.path))
+            if self.method == "GET":
                 content_type = mimetypes.guess_type(self.path)[0]
-                with open(self.path, 'rb') as file:
+                with open(self.path, "rb") as file:
                     body = file.read(file_size)
 
         # Prepare response
-        first_line = '{} {} {}'.format(PROTOCOL, self.code, RESPONSE_CODES[self.code])
+        first_line = "{} {} {}".format(PROTOCOL, self.code, RESPONSE_CODES[self.code])
         headers = {
-            'Date': datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'),
-            'Server': SERVER_NAME,
-            'Connection': 'close',
-            'Content-Length': file_size,
-            'Content-Type': content_type,
+            "Date": datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+            "Server": SERVER_NAME,
+            "Connection": "close",
+            "Content-Length": file_size,
+            "Content-Type": content_type,
         }
-        headers = '\r\n'.join('{}: {}'.format(k, v) for k, v in headers.items())
-        response = '{}\r\n{}{}'.format(first_line, headers, HEAD_TERMINATOR).encode() + body
+        headers = "\r\n".join("{}: {}".format(k, v) for k, v in headers.items())
+        response = "{}\r\n{}{}".format(first_line, headers, HEAD_TERMINATOR).encode() + body
         return response
-
-
-def receive(connection):
-    """
-    Receive request data
-
-    Returns:
-        str: Request data
-    """
-    result = ''
-    while True:
-        chunk = connection.recv(CHUNK_SIZE)
-        result += chunk.decode()
-        if not chunk:
-            raise ConnectionError
-        if HEAD_TERMINATOR in result or len(result) >= MAX_REQUEST_SIZE:
-            break
-    return result
-
-
-def process_request(connection, client_address, document_root):
-    """
-    Process request - parse request, prepare and send response
-
-    Args:
-        connection (socket.socket): Socket connection to client
-        client_address (tuple): Socket client address (host, port)
-        document_root (str): Files root directory
-    """
-    worker_id = os.getpid()
-
-    try:
-        request_data = receive(connection)
-        request = HTTPRequest(document_root)
-        code, method, path, headers = request.parse(request_data)
-        response = HTTPResponse(code, method, path, headers)
-        response_data = response.process()
-
-        logging.info('[Worker {}] "{} {} {}" {}'.format(
-            worker_id, method, path, PROTOCOL, code
-        ))
-        connection.sendall(response_data)
-    except Exception:
-        logging.exception('[Worker {}] Error while sending response to {}'.format(
-            worker_id, client_address
-        ))
-    finally:
-        logging.debug('[Worker {}] Closing socket for {}'.format(
-            worker_id, client_address
-        ))
-        connection.close()
 
 
 class HTTPServer(object):
     """
     HTTP server handler
     """
+
     def __init__(self, host, port, document_root):
         """
         Args:
@@ -240,11 +192,54 @@ class HTTPServer(object):
             connection = None
             try:
                 connection, client_address = self.socket.accept()
-                logging.debug('[Worker {}] Request from {}'.format(os.getpid(), client_address))
-                process_request(connection, client_address, self.document_root)
+                logging.debug("[Worker {}] Request from {}".format(os.getpid(), client_address))
+                self.process_request(connection, client_address, self.document_root)
             except OSError:
                 if connection:
                     connection.close()
+
+    def receive(self, connection):
+        """
+        Receive request data
+
+        Returns:
+            str: Request data
+        """
+        result = ""
+        while True:
+            chunk = connection.recv(CHUNK_SIZE)
+            result += chunk.decode()
+            if not chunk:
+                raise ConnectionError
+            if HEAD_TERMINATOR in result or len(result) >= MAX_REQUEST_SIZE:
+                break
+        return result
+
+    def process_request(self, connection, client_address, document_root):
+        """
+        Process request - parse request, prepare and send response
+
+        Args:
+            connection (socket.socket): Socket connection to client
+            client_address (tuple): Socket client address (host, port)
+            document_root (str): Files root directory
+        """
+        worker_id = os.getpid()
+
+        try:
+            request_data = self.receive(connection)
+            request = HTTPRequest(document_root, ("GET", "HEAD"))
+            code, method, path, headers = request.parse(request_data)
+            response = HTTPResponse(code, method, path, headers)
+            response_data = response.process()
+
+            logging.info('[Worker {}] "{} {} {}" {}'.format(worker_id, method, path, PROTOCOL, code))
+            connection.sendall(response_data)
+        except Exception:
+            logging.exception("[Worker {}] Error while sending response to {}".format(worker_id, client_address))
+        finally:
+            logging.debug("[Worker {}] Closing socket for {}".format(worker_id, client_address))
+            connection.close()
 
 
 def run_server(host, port, workers, document_root):
@@ -257,7 +252,7 @@ def run_server(host, port, workers, document_root):
         workers (int): Number of workers
         document_root (str): Files root directory
     """
-    logging.info('Starting server at http://{}:{}'.format(host, port))
+    logging.info("Starting server at http://{}:{}".format(host, port))
     server = HTTPServer(host, port, document_root)
     server.start()
 
@@ -267,14 +262,16 @@ def run_server(host, port, workers, document_root):
             process = multiprocessing.Process(target=server.serve_forever)
             processes.append(process)
             process.start()
-            logging.debug('[Worker {}] Started'.format(process.pid))
+            logging.debug("[Worker {}] Started".format(process.pid))
         for process in processes:
             process.join()
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as error:
+        logging.error("Exception  [Worker {}] Started. Error: {}".format(process.pid, str(error)))
+    finally:
         for process in processes:
             if process:
                 process.terminate()
-                logging.debug('[Worker {}] Terminated'.format(process.pid))
+                logging.debug("[Worker {}] Terminated".format(process.pid))
 
 
 def setup_logger(debug):
@@ -284,9 +281,7 @@ def setup_logger(debug):
     Args:
         debug (bool): True if should show debug messages
     """
-    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO,
-                        format='[%(asctime)s] %(levelname).1s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO, format="[%(asctime)s] %(levelname).1s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
 
 def parse_arguments():
@@ -297,16 +292,15 @@ def parse_arguments():
         argparse.Namespace: Program arguments
     """
     parser = argparse.ArgumentParser(description=SERVER_NAME)
-    parser.add_argument('-s', '--host', type=str, default='127.0.0.1', help='Host')
-    parser.add_argument('-p', '--port', type=int, default=8080, help='Port')
-    parser.add_argument('-w', '--workers', type=int, default=1, help='Number of workers')
-    parser.add_argument('-r', '--root', type=str, default=DOCUMENT_ROOT,
-                        help='Files root directory (DOCUMENT_ROOT)')
-    parser.add_argument('-d', '--debug', action='store_true', help='Show debug messages')
+    parser.add_argument("-s", "--host", type=str, default="127.0.0.1", help="Host")
+    parser.add_argument("-p", "--port", type=int, default=8080, help="Port")
+    parser.add_argument("-w", "--workers", type=int, default=1, help="Number of workers")
+    parser.add_argument("-r", "--root", type=str, default=DOCUMENT_ROOT, help="Files root directory (DOCUMENT_ROOT)")
+    parser.add_argument("-d", "--debug", action="store_true", help="Show debug messages")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_arguments()
     setup_logger(args.debug)
     run_server(args.host, args.port, args.workers, args.root)
